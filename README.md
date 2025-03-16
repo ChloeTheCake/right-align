@@ -1,2 +1,1 @@
-# right-align
-Just right aligns text files
+Literally the most hell thing ever dw about it
