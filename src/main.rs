@@ -1,5 +1,4 @@
 use std::{
-    io,
     env,
     fs,
     io::Write
@@ -7,13 +6,13 @@ use std::{
 
 #[derive(Default)]
 struct Config {
-    indent_dep: bool,
+    //whitespace_dep: bool,
+    preserve_indent: bool,
     in_path: String,
     out_path: String,
 }
 
 fn main() {
-    sanity_check();
     let conf: Config = match set_config() {
         Ok(c) => c,
         Err(e) => panic!("Error in setting config: {}", e)
@@ -24,8 +23,6 @@ fn main() {
     write_lines_to_file(&outdata, &conf.out_path); 
 }
 
-// #########################################################
-// #########################################################
 // #########################################################
 
 
@@ -45,48 +42,77 @@ fn write_lines_to_file(outdata: &Vec<String>, name: &str) {
     for line in outdata.iter() {
         file.write(line.as_bytes()).expect("failure to write to output");
         file.write("\n".as_bytes()).expect("failure to write to output");
-
-
-
-        //match fs::write(name, line). {
-        //    Ok(_) => (),
-        //    Err(e) => panic!("Failure to write to output\nError: {}", e)
-        //}
     }
 }
 
-fn right_align_contents(data: &Vec<String>, _conf: &Config) -> Vec<String> {
+fn right_align_contents(data: &Vec<String>, conf: &Config) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
-    let right_wall = find_right_wall(data);
-    for line in data.iter() {
-        let len = line.chars().count();
-        let diff = right_wall - len;
-        let newline = format!("{}{}", &" ".repeat(diff), line);
-        out.push(newline.clone());
 
-
+    if conf.preserve_indent == false {
+        let right_wall = find_right_wall(data, conf);
+        for line in data.iter() {
+            let diff = right_wall - line.chars().count();
+            let newline = format!("{}{}", &" ".repeat(diff), line);
+            out.push(newline.clone());
+        }
+    } 
+    else {
+        let right_wall = find_right_wall(data, conf);
+        for line in data.iter() {
+            let indent_level: usize = find_indent_level(&line);
+            let diff = right_wall - line.chars().count();
+            let newline = format!("{}{}", &" ".repeat(diff - indent_level), line);
+            out.push(newline.clone());
+        }
     }
+
     out
 }
 
 // #########################################################
-// #########################################################
+
+fn find_indent_level(line: &str) -> usize {
+    let mut indent: usize = 0;
+    for char in line.chars() {
+        if char == '\t' || char == ' ' {
+            indent += 1;
+        } else if char != '\t' || char !=' ' {
+            return indent
+        }
+    }
+    indent
+}
+
 // #########################################################
 
-fn find_right_wall(data: &Vec<String>) -> usize {
+fn find_right_wall(data: &Vec<String>, conf: &Config) -> usize {
     let mut right_wall: usize = 0;
-    for line in data.iter() {
-        let len = line.chars().count();
-        if len > right_wall {
-            right_wall = len;
+    if conf.preserve_indent == false {
+        for line in data.iter() {
+            let len = line.chars().count();
+            if len > right_wall {
+                right_wall = len;
+            }
         }
+    }
+    else if conf.preserve_indent == true {
+        let mut max_indent: usize = 0;
+        for line in data.iter() {
+            let indent: usize = find_indent_level(line);
+            let len = line.chars().count();
+            if indent > max_indent {
+                max_indent = indent;
+            }
+            if len > right_wall {
+                right_wall = len;
+            }
+        }
+        right_wall += max_indent;
     }
     right_wall
 }
 
 
-// #########################################################
-// #########################################################
 // #########################################################
 
 fn read_contents(conf: &Config) -> Vec<String> {
@@ -97,8 +123,6 @@ fn read_contents(conf: &Config) -> Vec<String> {
         .collect()
 }
 
-// #########################################################
-// #########################################################
 // #########################################################
 
 fn is_valid_file(path: &str) -> bool {
@@ -113,8 +137,6 @@ fn is_valid_file(path: &str) -> bool {
 }
 
 // #########################################################
-// #########################################################
-// #########################################################
 
 fn set_config() -> Result<Config, &'static str> {
     let mut conf = Config::default();
@@ -122,8 +144,8 @@ fn set_config() -> Result<Config, &'static str> {
     let mut arg_iter = args.iter();
 
     while let Some(arg) = arg_iter.next() {
-        if arg.trim() == "--indent-dep" {
-            conf.indent_dep = true;
+        if arg.trim() == "--preserve-indent" {
+            conf.preserve_indent = true;
         }
 
         if arg.trim() == "--input" {
@@ -153,20 +175,3 @@ fn set_config() -> Result<Config, &'static str> {
     Ok(conf)
 }
 
-// #########################################################
-// #########################################################
-// #########################################################
-
-fn sanity_check() {
-    println!("You're about to commit a sin, wanna continue? (y/n): ");
-    let mut p = String::new();
-    match io::stdin().read_line(&mut p) {
-        Ok(_n) => { 
-            if p.trim() != "y" {
-                println!("\nOk\n");
-                return;
-            }
-        }
-        Err(e) => panic!("Error in sanity_check: {}", e),
-    };
-}
