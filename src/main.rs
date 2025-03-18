@@ -1,8 +1,4 @@
-use std::{
-    env,
-    fs,
-    io::Write
-};
+use std::{env, fs, io::Write};
 
 #[derive(Default)]
 struct Config {
@@ -15,23 +11,22 @@ struct Config {
 fn main() {
     let conf: Config = match set_config() {
         Ok(c) => c,
-        Err(e) => panic!("Error in setting config: {}", e)
+        Err(e) => panic!("Error in setting config: {}", e),
     };
 
     let data: Vec<String> = read_contents(&conf);
     let outdata: Vec<String> = right_align_contents(&data, &conf);
-    write_lines_to_file(&outdata, &conf.out_path); 
+    write_lines_to_file(&outdata, &conf.out_path);
 }
 
 // #########################################################
 
-
 fn write_lines_to_file(outdata: &Vec<String>, name: &str) {
-    if !is_valid_file(&name) {
+    if !is_valid_file(name) {
         println!("Attempting to create the file: {}", name);
         match fs::File::create(&name) {
             Ok(_) => (),
-            Err(e) => panic!("Cannot create non-existent file\nError: {}", e)
+            Err(e) => panic!("Cannot create non-existent file\nError: {}", e),
         }
     }
 
@@ -40,8 +35,12 @@ fn write_lines_to_file(outdata: &Vec<String>, name: &str) {
         .open(name)
         .expect("Error opening out file");
     for line in outdata.iter() {
-        file.write(line.as_bytes()).expect("failure to write to output");
-        file.write("\n".as_bytes()).expect("failure to write to output");
+        _ = file
+            .write(line.as_bytes())
+            .expect("failure to write to output");
+        _ = file
+            .write("\n".as_bytes())
+            .expect("failure to write to output");
     }
 }
 
@@ -55,8 +54,7 @@ fn right_align_contents(data: &Vec<String>, conf: &Config) -> Vec<String> {
             let newline = format!("{}{}", &" ".repeat(diff), line);
             out.push(newline.clone());
         }
-    } 
-    else {
+    } else {
         let right_wall = find_right_wall(data, conf);
         for line in data.iter() {
             let indent_level: usize = find_indent_level(&line);
@@ -76,8 +74,8 @@ fn find_indent_level(line: &str) -> usize {
     for char in line.chars() {
         if char == '\t' || char == ' ' {
             indent += 1;
-        } else if char != '\t' || char !=' ' {
-            return indent
+        } else if char != '\t' || char != ' ' {
+            return indent;
         }
     }
     indent
@@ -94,8 +92,7 @@ fn find_right_wall(data: &Vec<String>, conf: &Config) -> usize {
                 right_wall = len;
             }
         }
-    }
-    else if conf.preserve_indent == true {
+    } else if conf.preserve_indent == true {
         let mut max_indent: usize = 0;
         for line in data.iter() {
             let indent: usize = find_indent_level(line);
@@ -111,7 +108,6 @@ fn find_right_wall(data: &Vec<String>, conf: &Config) -> usize {
     }
     right_wall
 }
-
 
 // #########################################################
 
@@ -133,7 +129,6 @@ fn is_valid_file(path: &str) -> bool {
             false
         }
     }
-
 }
 
 // #########################################################
@@ -152,12 +147,10 @@ fn set_config() -> Result<Config, &'static str> {
             if let Some(path) = arg_iter.next() {
                 if is_valid_file(path) {
                     conf.in_path = path.to_string();
-                }
-                else {
+                } else {
                     return Err("Not a valid file");
                 }
-            }
-            else {
+            } else {
                 return Err("No path for --input was specified");
             }
         }
@@ -165,8 +158,7 @@ fn set_config() -> Result<Config, &'static str> {
         if arg.trim() == "--output" {
             if let Some(name) = arg_iter.next() {
                 conf.out_path = name.to_string();
-            }
-            else {
+            } else {
                 return Err("No output file name specified");
             }
         }
@@ -174,4 +166,3 @@ fn set_config() -> Result<Config, &'static str> {
 
     Ok(conf)
 }
-
